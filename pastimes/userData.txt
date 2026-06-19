@@ -1,0 +1,7 @@
+John	Doe	j.doe@abc.co.za	27831234567	482c811da5d5b4bc6d497ffa98491e38	buyer	active	Gauteng	Johannesburg
+Sarah	Nkosi	s.nkosi@gmail.com	27729876543	7ba4b083c33d4ab6025e3249af3cd28e	seller	active	Western Cape	Cape Town
+Lebo	Mokoena	l.mokoena@outlook.com	27641112233	a4f07118a548b4c7311d51558833c87a	buyer	active	Gauteng	Pretoria
+Thabo	Dlamini	t.dlamini@yahoo.com	27823334455	588c6cd155045abf76071d198bbeb176	seller	pending	KZN	Durban
+Aisha	Patel	a.patel@hotmail.com	27714445566	626ad5818da3026da2e5cd44863145d5	buyer	active	Gauteng	Sandton
+Mpho	Sithole	m.sithole@gmail.com	27835556677	d8e4d48af58947a154ddc84702e3eb27	seller	active	Gauteng	Soweto
+Admin	User	admin@pastimes.co.za	27700000001	25e4ee4e9229397b6b17776bfceaf8e7	admin	active	Gauteng	Johannesburg
