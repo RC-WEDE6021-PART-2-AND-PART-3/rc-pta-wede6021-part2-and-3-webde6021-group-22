@@ -97,11 +97,19 @@ require_once 'includes/header.php';
     <div class="grid-4">
       <?php foreach ($listings as $i => $item): ?>
       <div class="card product-card" style="animation-delay:<?= $i*0.07 ?>s;">
-        <?php if ($item['is_verified']): ?>
-          <div class="verified-badge">✓ Verified</div>
-        <?php endif; ?>
-        <div class="img-wrap" style="background:<?= $swatches[$i % count($swatches)] ?>;min-height:220px;display:flex;align-items:center;justify-content:center;">
-          <span style="font-size:3rem;opacity:.3;">👗</span>
+        <div class="img-wrap" style="min-height:220px;background:var(--light-grey);position:relative;overflow:hidden;">
+          <?php if (!empty($item['image_url'])): ?>
+            <img src="uploads/listings/thumbnails/<?= htmlspecialchars($item['image_url']) ?>" 
+                 alt="<?= htmlspecialchars($item['title']) ?>"
+                 style="width:100%;height:100%;object-fit:cover;">
+          <?php else: ?>
+            <div style="display:flex;align-items:center;justify-content:center;height:100%;background:<?= $swatches[$i % count($swatches)] ?>;">
+              <span style="font-size:3rem;opacity:.3;">👗</span>
+            </div>
+          <?php endif; ?>
+          <?php if ($item['is_verified']): ?>
+            <div class="verified-badge">✓ Verified</div>
+          <?php endif; ?>
         </div>
         <div class="product-info">
           <div class="product-brand"><?= htmlspecialchars($item['brand'] ?? '') ?></div>

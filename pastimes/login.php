@@ -58,7 +58,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['status']     = $user['account_status'];
 
                 $loginBanner = "User {$user['first_name']} {$user['last_name']} is logged in";
-
+// Check if user has a pending seller request
+$stmt = $conn->prepare("SELECT status, admin_notes FROM tblSellerRequest WHERE user_id = ? ORDER BY requested_at DESC LIMIT 1");
+$stmt->bind_param('i', $user['user_id']);
+$stmt->execute();
+$requestResult = $stmt->get_result();
+if ($requestResult->num_rows > 0) {
+    $request = $requestResult->fetch_assoc();
+    if ($request['status'] === 'pending') {
+        $_SESSION['seller_request_pending'] = true;
+    } elseif ($request['status'] === 'approved') {
+        $_SESSION['seller_request_approved'] = true;
+    } elseif ($request['status'] === 'rejected') {
+        $_SESSION['seller_request_rejected'] = true;
+        $_SESSION['seller_request_notes'] = $request['admin_notes'] ?? '';
+    }
+}
+$stmt->close();
                 $redirect = ($user['role'] === 'admin') ? 'admin/dashboard.php' : 'dashboard.php';
                 header("Location: $redirect");
                 exit;

@@ -216,20 +216,30 @@ require_once 'includes/header.php';
           <div class="verified-badge">✓ Verified</div>
           <?php endif; ?>
 
-          <!-- Product image placeholder -->
-          <div class="img-wrap"
-               style="background:<?= $swatches[$i % count($swatches)] ?>;
-                      min-height:240px;display:flex;align-items:center;justify-content:center;">
+          <!-- Product image -->
+<div class="img-wrap" style="min-height:240px;background:var(--light-grey);position:relative;overflow:hidden;">
+    <?php if (!empty($item['image_url'])): ?>
+        <img src="uploads/listings/thumbnails/<?= htmlspecialchars($item['image_url']) ?>" 
+             alt="<?= htmlspecialchars($item['title']) ?>"
+             style="width:100%;height:100%;object-fit:cover;">
+    <?php else: ?>
+        <!-- Placeholder with category icon -->
+        <div style="display:flex;align-items:center;justify-content:center;height:100%;background:<?= $swatches[$i % count($swatches)] ?>;">
             <span style="font-size:4rem;opacity:.2;">
-              <?= match(strtolower($item['category'] ?? '')) {
-                'shoes'        => '👟',
-                'bags'         => '👜',
-                'accessories'  => '💍',
-                'men'          => '👔',
-                default        => '👗'
-              } ?>
+                <?= match(strtolower($item['category'] ?? '')) {
+                    'shoes'        => '👟',
+                    'bags'         => '👜',
+                    'accessories'  => '💍',
+                    'men'          => '👔',
+                    default        => '👗'
+                } ?>
             </span>
-          </div>
+        </div>
+    <?php endif; ?>
+    <?php if ($item['is_verified']): ?>
+        <div class="verified-badge">✓ Verified</div>
+    <?php endif; ?>
+</div>
 
           <div class="product-info">
             <?php if ($item['brand']): ?>
@@ -255,17 +265,26 @@ require_once 'includes/header.php';
               <?php if ($item['reputation_score'] > 0): ?>
               · ⭐ <?= number_format($item['reputation_score'], 1) ?>
               <?php endif; ?>
+            
+            </div>
+             · <a href="message-seller.php?listing_id=<?= (int)$item['listing_id'] ?>" style="color:var(--gold);">Message</a>
             </div>
 
-            <!-- Buy button -->
-            <div style="margin-top:.75rem;">
-              <?php if (isLoggedIn()): ?>
-                <a href="checkout.php?listing_id=<?= (int)$item['listing_id'] ?>"
-                   class="btn btn-primary btn-block btn-sm">Buy Now — R<?= number_format($item['price'],2) ?></a>
-              <?php else: ?>
-                <a href="login.php" class="btn btn-outline btn-block btn-sm">Sign In to Buy</a>
-              <?php endif; ?>
-            </div>
+            <!-- Buy and Add to Cart buttons -->
+<div style="display:flex;gap:.5rem;margin-top:.75rem;">
+    <?php if (isLoggedIn()): ?>
+        <form method="POST" action="cart.php" style="flex:1;">
+            <input type="hidden" name="action" value="add">
+            <input type="hidden" name="listing_id" value="<?= (int)$item['listing_id'] ?>">
+            <input type="hidden" name="quantity" value="1">
+            <button type="submit" class="btn btn-outline btn-block btn-sm">Add to Cart</button>
+        </form>
+        <a href="checkout.php?listing_id=<?= (int)$item['listing_id'] ?>"
+           class="btn btn-primary btn-sm" style="flex:1;text-align:center;">Buy Now</a>
+    <?php else: ?>
+        <a href="login.php" class="btn btn-outline btn-block btn-sm">Sign In to Buy</a>
+    <?php endif; ?>
+</div>
           </div>
         </div>
         <?php endforeach; ?>

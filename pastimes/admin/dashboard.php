@@ -148,10 +148,22 @@ $conn->close();
         <span class="badge badge-orange" style="margin-left:auto;"><?= $pendingUsers ?></span>
         <?php endif; ?>
       </a>
+      <a href="listings.php" class="sidebar-link">
+        👕 Listings
+      </a>
+      <a href="messages.php" class="sidebar-link">
+        📬 Messages
+      </a>
+      <a href="orders.php" class="sidebar-link">
+        📦 Orders
+      </a>
       <a href="dashboard.php?filter=all" class="sidebar-link">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         All Users
       </a>
+      <a href="seller_requests.php" class="sidebar-link">
+    📋 Seller Requests
+</a>
       <div class="sidebar-label">Site</div>
       <a href="../browse.php" class="sidebar-link">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>

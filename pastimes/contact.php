@@ -4,9 +4,51 @@ $cssPath   = 'css/style.css';
 require_once 'includes/header.php';
 
 $success = false;
+$error = '';
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // In a real app, this would send email via PHPMailer
-    $success = true;
+    // Get form data
+    $name = trim($_POST['name'] ?? '');
+    $email = trim($_POST['email'] ?? '');
+    $subject = trim($_POST['subject'] ?? '');
+    $message = trim($_POST['message'] ?? '');
+
+    // Validate
+    if (empty($name) || empty($email) || empty($subject) || empty($message)) {
+        $error = 'Please fill in all fields.';
+    } else {
+        try {
+            require_once 'includes/DBConn.php';
+            $conn = getDBConnection();
+
+            // DYNAMIC FIX: Find an actual existing admin user ID dynamically
+            $adminQuery = $conn->query("SELECT user_id FROM tblUser WHERE role = 'admin' AND account_status = 'active' LIMIT 1");
+            if ($adminQuery && $adminQuery->num_rows > 0) {
+                $adminRow = $adminQuery->fetch_assoc();
+                $adminId = (int)$adminRow['user_id'];
+            } else {
+                // Fallback if no admin accounts exist yet
+                throw new Exception('No active admin account found in the system to receive messages.');
+            }
+
+            // Build full message with sender info
+            $fullMessage = "From: $name ($email)\nSubject: $subject\n\n$message";
+
+            // Prepare statements with explicit NULL type handling
+            $stmt = $conn->prepare("INSERT INTO tblMessage (sender_id, receiver_id, message_text, sent_at) VALUES (NULL, ?, ?, NOW())");
+            $stmt->bind_param('is', $adminId, $fullMessage);
+
+            if ($stmt->execute()) {
+                $success = true;
+            } else {
+                $error = 'Error saving your message: ' . $stmt->error;
+            }
+            $stmt->close();
+            $conn->close();
+        } catch (Exception $e) {
+            $error = 'Database error: ' . $e->getMessage();
+        }
+    }
 }
 ?>
 
@@ -20,6 +62,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <div class="container" style="padding:4rem 1.5rem;">
   <?php if ($success): ?>
   <div class="alert alert-success">Your message has been sent. We'll get back to you within 24 hours.</div>
+  <?php endif; ?>
+
+  <?php if ($error): ?>
+  <div class="alert alert-error"><?= htmlspecialchars($error) ?></div>
   <?php endif; ?>
 
   <div class="grid-2" style="gap:3rem;">

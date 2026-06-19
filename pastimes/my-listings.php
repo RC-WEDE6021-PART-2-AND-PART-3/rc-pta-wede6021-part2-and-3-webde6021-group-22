@@ -90,13 +90,30 @@ require_once 'includes/header.php';
       <table>
         <thead>
           <tr>
-            <th>Item</th><th>Category</th><th>Brand</th><th>Size</th>
-            <th>Price</th><th>Condition</th><th>Type</th><th>Listed</th><th>Actions</th>
+            <th>Image</th>
+            <th>Item</th>
+            <th>Category</th>
+            <th>Brand</th>
+            <th>Size</th>
+            <th>Price</th>
+            <th>Condition</th>
+            <th>Type</th>
+            <th>Listed</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
           <?php foreach ($listings as $l): ?>
           <tr>
+            <td>
+              <?php if (!empty($l['image_url'])): ?>
+                <img src="uploads/listings/thumbnails/<?= htmlspecialchars($l['image_url']) ?>" 
+                     alt="<?= htmlspecialchars($l['title']) ?>"
+                     style="width:50px;height:50px;object-fit:cover;border-radius:var(--radius);">
+              <?php else: ?>
+                <span style="font-size:1.5rem;">👗</span>
+              <?php endif; ?>
+            </td>
             <td>
               <div style="font-weight:600;"><?= htmlspecialchars($l['title']) ?></div>
               <?php if ($l['is_verified']): ?><span class="badge badge-gold">✓ Verified</span><?php endif; ?>

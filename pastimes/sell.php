@@ -1,5 +1,8 @@
 <?php
-// sell.php — Create a new listing
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+// sell.php — Create a new listing with image upload
 $pageTitle = 'List an Item';
 $cssPath   = 'css/style.css';
 
@@ -13,8 +16,101 @@ $errors  = [];
 $success = false;
 $sticky  = [];
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+// Handle image upload
+function uploadListingImage($file) {
+    $targetDir = __DIR__ . '/uploads/listings/full/';
+    $thumbDir = __DIR__ . '/uploads/listings/thumbnails/';
+    
+    // Create directories if they don't exist
+    if (!is_dir($targetDir)) mkdir($targetDir, 0777, true);
+    if (!is_dir($thumbDir)) mkdir($thumbDir, 0777, true);
+    
+    $fileName = time() . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '', $file['name']);
+    $targetPath = $targetDir . $fileName;
+    $thumbPath = $thumbDir . $fileName;
+    
+    // Validate image
+    $check = getimagesize($file['tmp_name']);
+    if ($check === false) {
+        return ['error' => 'File is not an image.'];
+    }
+    
+    // Check file size (max 5MB)
+    if ($file['size'] > 5 * 1024 * 1024) {
+        return ['error' => 'Image size must be less than 5MB.'];
+    }
+    
+    // Allowed formats
+    $allowed = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+    $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+    if (!in_array($ext, $allowed)) {
+        return ['error' => 'Only JPG, PNG, GIF, and WEBP are allowed.'];
+    }
+    
+    // Move uploaded file
+    if (move_uploaded_file($file['tmp_name'], $targetPath)) {
+        // Create thumbnail
+        createThumbnail($targetPath, $thumbPath, 200, 200);
+        return ['success' => true, 'filename' => $fileName];
+    }
+    
+    return ['error' => 'Failed to upload image.'];
+}
 
+function createThumbnail($source, $destination, $width, $height) {
+    list($origWidth, $origHeight, $type) = getimagesize($source);
+    
+    // Calculate aspect ratio
+    $ratio = min($width / $origWidth, $height / $origHeight);
+    $newWidth = $origWidth * $ratio;
+    $newHeight = $origHeight * $ratio;
+    
+    $thumb = imagecreatetruecolor($newWidth, $newHeight);
+    
+    // Load image based on type
+    switch ($type) {
+        case IMAGETYPE_JPEG:
+            $sourceImage = imagecreatefromjpeg($source);
+            break;
+        case IMAGETYPE_PNG:
+            $sourceImage = imagecreatefrompng($source);
+            imagealphablending($thumb, false);
+            imagesavealpha($thumb, true);
+            break;
+        case IMAGETYPE_GIF:
+            $sourceImage = imagecreatefromgif($source);
+            break;
+        case IMAGETYPE_WEBP:
+            $sourceImage = imagecreatefromwebp($source);
+            break;
+        default:
+            return false;
+    }
+    
+    imagecopyresampled($thumb, $sourceImage, 0, 0, 0, 0, $newWidth, $newHeight, $origWidth, $origHeight);
+    
+    // Save thumbnail
+    switch ($type) {
+        case IMAGETYPE_JPEG:
+            imagejpeg($thumb, $destination, 80);
+            break;
+        case IMAGETYPE_PNG:
+            imagepng($thumb, $destination, 8);
+            break;
+        case IMAGETYPE_GIF:
+            imagegif($thumb, $destination);
+            break;
+        case IMAGETYPE_WEBP:
+            imagewebp($thumb, $destination, 80);
+            break;
+    }
+    
+    imagedestroy($thumb);
+    imagedestroy($sourceImage);
+    return true;
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $sticky = [
         'title'       => trim($_POST['title']        ?? ''),
         'description' => trim($_POST['description']  ?? ''),
@@ -37,21 +133,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ((int)($sticky['quantity']) < 1)
         $errors[] = 'Quantity must be at least 1.';
 
+    // Handle image upload
+    $imageFile = $_FILES['listing_image'] ?? null;
+    $imageFilename = null;
+    
+    if ($imageFile && $imageFile['error'] === UPLOAD_ERR_OK) {
+        $uploadResult = uploadListingImage($imageFile);
+        if (isset($uploadResult['error'])) {
+            $errors[] = $uploadResult['error'];
+        } else {
+            $imageFilename = $uploadResult['filename'];
+        }
+    } elseif ($imageFile && $imageFile['error'] !== UPLOAD_ERR_NO_FILE) {
+        $errors[] = 'Error uploading image. Please try again.';
+    }
+
     if (empty($errors)) {
         $conn = getDBConnection();
 
         $stmt = $conn->prepare(
             "INSERT INTO tblListing
-                (seller_id, title, description, category, sub_category,
+                (seller_id, title, description, image_url, category, sub_category,
                  brand, condition_grade, size, colour, price, quantity,
                  listing_type, listing_status, is_verified)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'p2p', 'active', 0)"
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'p2p', 'active', 0)"
         );
         $stmt->bind_param(
-            'issssssssdi',
+            'issssssssddi',
             $user['user_id'],
             $sticky['title'],
             $sticky['description'],
+            $imageFilename,
             $sticky['category'],
             $sticky['sub_category'],
             $sticky['brand'],
@@ -122,7 +234,7 @@ require_once 'includes/header.php';
     <div style="font-size:2rem;">🤖</div>
     <div style="flex:1;">
       <div style="color:var(--gold);font-weight:700;font-size:.9rem;">AI Smart Listing Tool</div>
-      <div style="color:#888;font-size:.8rem;">In the full build, upload a photo and AI will auto-fill brand, colour and condition for you.</div>
+      <div style="color:#888;font-size:.8rem;">Upload a photo and AI will auto-fill brand, colour and condition for you.</div>
     </div>
     <button class="btn btn-outline btn-sm" style="flex-shrink:0;"
             onclick="alert('AI photo analysis will be available in the full production build.')">
@@ -131,7 +243,7 @@ require_once 'includes/header.php';
   </div>
 
   <!-- Form -->
-  <form method="POST" action="sell.php" novalidate id="sellForm">
+  <form method="POST" action="sell.php" novalidate id="sellForm" enctype="multipart/form-data">
 
     <!-- Section 1: Item Details -->
     <div class="card" style="margin-bottom:1.5rem;">
@@ -151,6 +263,29 @@ require_once 'includes/header.php';
           <label for="description">Description</label>
           <textarea id="description" name="description" class="form-control" rows="4"
                     placeholder="Describe the item — fit, fabric, any flaws, how often it was worn…"><?= htmlspecialchars($sticky['description'] ?? '') ?></textarea>
+        </div>
+
+        <!-- Image Upload -->
+        <div class="form-group">
+          <label for="listing_image">Product Image</label>
+          <div style="border:2px dashed var(--light-grey);border-radius:var(--radius);padding:2rem;text-align:center;cursor:pointer;transition:all var(--transition);"
+               id="dropZone" 
+               onmouseover="this.style.borderColor='var(--gold)'" 
+               onmouseout="this.style.borderColor='var(--light-grey)'">
+            <div style="font-size:3rem;margin-bottom:.5rem;">📸</div>
+            <div style="font-weight:600;color:var(--charcoal);">Drop your image here or click to browse</div>
+            <div style="font-size:.8rem;color:var(--mid-grey);margin-top:.5rem;">
+              JPG, PNG, GIF, WEBP · Max 5MB
+            </div>
+            <input type="file" id="listing_image" name="listing_image" accept="image/*" style="display:none;" 
+                   onchange="handleFileSelect(this)">
+            <div id="imagePreview" style="display:none;margin-top:1rem;position:relative;display:inline-block;">
+              <img id="previewImg" src="#" alt="Preview" style="max-width:200px;max-height:200px;border-radius:var(--radius);">
+              <button type="button" onclick="removeImage()" 
+                      style="position:absolute;top:-10px;right:-10px;background:var(--error);color:white;border:none;border-radius:50%;width:24px;height:24px;cursor:pointer;font-size:14px;line-height:24px;text-align:center;">✕</button>
+            </div>
+          </div>
+          <div class="form-hint">Upload a clear photo of your item for best results.</div>
         </div>
 
         <div class="grid-2" style="gap:1rem;">
@@ -294,9 +429,60 @@ require_once 'includes/header.php';
   <?php endif; ?>
 </div>
 
-<?php require_once 'includes/footer.php'; ?>
-
 <script>
+// Image upload handlers
+function handleFileSelect(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('previewImg').src = e.target.result;
+            document.getElementById('imagePreview').style.display = 'inline-block';
+            document.querySelector('#dropZone > div:first-child').style.display = 'none';
+            document.querySelector('#dropZone > div:nth-child(2)').style.display = 'none';
+            document.querySelector('#dropZone > div:nth-child(3)').style.display = 'none';
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+function removeImage() {
+    document.getElementById('listing_image').value = '';
+    document.getElementById('imagePreview').style.display = 'none';
+    document.querySelector('#dropZone > div:first-child').style.display = 'block';
+    document.querySelector('#dropZone > div:nth-child(2)').style.display = 'block';
+    document.querySelector('#dropZone > div:nth-child(3)').style.display = 'block';
+}
+
+// Drag and drop
+const dropZone = document.getElementById('dropZone');
+dropZone.addEventListener('click', function() {
+    document.getElementById('listing_image').click();
+});
+
+dropZone.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    this.style.borderColor = 'var(--gold)';
+    this.style.background = 'rgba(200,169,110,.05)';
+});
+
+dropZone.addEventListener('dragleave', function(e) {
+    e.preventDefault();
+    this.style.borderColor = 'var(--light-grey)';
+    this.style.background = 'transparent';
+});
+
+dropZone.addEventListener('drop', function(e) {
+    e.preventDefault();
+    this.style.borderColor = 'var(--light-grey)';
+    this.style.background = 'transparent';
+    
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+        document.getElementById('listing_image').files = files;
+        handleFileSelect(document.getElementById('listing_image'));
+    }
+});
+
 // Client-side HTML5 validation
 document.getElementById('sellForm')?.addEventListener('submit', function(e) {
   let valid = true;
@@ -329,7 +515,6 @@ document.getElementById('sellForm')?.addEventListener('submit', function(e) {
   if (!valid) {
     e.preventDefault();
     window.scrollTo({top: 0, behavior: 'smooth'});
-    // Show inline error banner if not already present
     if (!document.querySelector('.sell-error-banner')) {
       const banner = document.createElement('div');
       banner.className = 'alert alert-error sell-error-banner';
@@ -347,3 +532,5 @@ document.querySelectorAll('.form-control').forEach(el => {
   });
 });
 </script>
+
+<?php require_once 'includes/footer.php'; ?>
